@@ -26,3 +26,13 @@ predictive of default risk.
 columns would likely have mattered (e.g. via domain reasoning or a quick
 model-with-flags comparison). Revisit only if there's a concrete reason to
 believe they'd move the needle — not by default.
+
+
+## 2026-07-17 — Median imputation applied to EXT_SOURCE_1 despite 56% missingness
+
+**Note:** Because EXT_SOURCE_1 was protected from dropping but still 56%
+missing, median imputation means over half its values are now a single
+constant (0.505998), flattening real variance in this otherwise high-signal
+column. Accepted for baseline; a smarter treatment (e.g. model-based
+imputation using EXT_SOURCE_2/3 as predictors, or a missing-flag + median
+combo) is a stronger v2 candidate specifically for this column.
