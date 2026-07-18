@@ -79,3 +79,29 @@ a property of the model's separability, not something threshold tuning
 can overcome — no threshold achieves both high precision and high recall.
 This motivates trying a stronger model (XGBoost) as the next step, since
 threshold tuning alone has diminishing returns on a linear baseline.
+
+
+## 2026-07-18 — XGBoost trained; corrected earlier AUC improvement estimate
+
+**Result:** XGBoost (untuned: n_estimators=200, max_depth=5, learning_rate=0.05,
+scale_pos_weight computed from class ratio) achieved AUC-ROC = 0.7574 on the
+same test set, vs. 0.7486 for logistic regression. Improvement = 0.0088.
+
+**Correction:** An earlier README entry predicted a 3-5 AUC point gain from
+gradient boosting, based on general knowledge of Kaggle leaderboard results
+for this dataset. Actual gain was under 1 point. That prediction has been
+removed from the README and replaced with the real result.
+
+**Reasoning for the gap:** (1) XGBoost hyperparameters were not tuned —
+published high-performing results typically use tuned models, often via
+grid/random search or Optuna. (2) This project uses only application_train.csv
+— most top solutions incorporate bureau.csv and previous_application.csv for
+richer engineered features (credit history, prior loan behavior), which likely
+account for a meaningful share of the reported gains. (3) EXT_SOURCE_1/2/3
+appear to carry a large share of the predictive signal and behave fairly
+linearly, which narrows the advantage tree-based models typically have over
+linear models on this specific dataset at the single-table level.
+
+**v2 candidates:** Hyperparameter tuning (grid search or Optuna) on XGBoost;
+incorporating bureau.csv-derived features to test whether the gap widens
+with richer inputs.

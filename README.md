@@ -45,19 +45,18 @@ Not included in this repo due to size (~2.5GB). To reproduce:
 
 ## Results
 
-
 | Model | AUC-ROC | Threshold | Recall (default) | Precision (default) |
 |---|---|---|---|---|
 | Logistic Regression (baseline, default threshold) | 0.7486 | 0.50 | 0.68 | 0.16 |
 | Logistic Regression (F1-tuned threshold) | 0.7486 | 0.65 | 0.43 | 0.23 |
+| XGBoost (untuned) | 0.7574 | 0.50 | — | — |
 
-AUC-ROC is threshold-independent (it measures ranking quality across all
-thresholds), so it's unchanged — only the operating point moves. The
-tuned threshold trades recall for precision: catches fewer defaulters
-(43% vs 68%) but with far fewer false alarms (23% vs 16% precision).
-Threshold choice here optimizes F1 in the absence of real cost data; a
-production system would set this based on actual cost-per-bad-loan vs.
-cost-per-manual-review figures.
+XGBoost improved AUC-ROC by 0.0088 over logistic regression — a real but
+modest gain, smaller than typically reported for this dataset. Likely
+explanations: hyperparameters were not tuned, and this uses only the main
+application table — most published high-performing solutions incorporate
+bureau.csv and previous_application.csv for richer credit history
+features, which is deferred to a future iteration.
 
 ## Repo Structure
 ├── data/raw/          # Raw CSVs (gitignored, download instructions above)
@@ -79,8 +78,5 @@ pip install -r requirements.txt
 ## Next Steps
 - Cost-ratio-based threshold tuning using real cost-per-bad-loan and
   cost-per-review figures, once available — current threshold (0.65) is
-  F1-optimized only, as a neutral stand-in for actual business costs
-- Gradient boosting comparison (XGBoost/LightGBM) — expected to outperform
-  logistic regression by roughly 3-5 AUC points on this dataset
-- Feature importance analysis
+  F1-optimized only, as a neutral stand-in for actual business costs- Feature importance analysis
 - SQL layer for the related Early Warning System (EWS) prototype

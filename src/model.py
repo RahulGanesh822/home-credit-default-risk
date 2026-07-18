@@ -119,3 +119,37 @@ def predict_with_threshold(y_pred_proba, threshold=0.65):
         Array of binary predictions.
     """
     return (y_pred_proba >= threshold).astype(int)
+
+from xgboost import XGBClassifier
+
+
+def train_xgboost_model(X_train, y_train):
+    """
+    Train an XGBoost classifier, handling class imbalance via scale_pos_weight.
+
+    Args:
+        X_train: Training features.
+        y_train: Training target.
+
+    Returns:
+        Fitted XGBoost model.
+    """
+    neg_count = (y_train == 0).sum()
+    pos_count = (y_train == 1).sum()
+    scale_pos_weight = neg_count / pos_count
+
+    xgb_model = XGBClassifier(
+        n_estimators=200,
+        max_depth=5,
+        learning_rate=0.05,
+        scale_pos_weight=scale_pos_weight,
+        random_state=42,
+        eval_metric="auc"
+    )
+
+    xgb_model.fit(X_train, y_train)
+
+    print("XGBoost model trained.")
+    print(f"scale_pos_weight used: {scale_pos_weight:.2f}")
+
+    return xgb_model
