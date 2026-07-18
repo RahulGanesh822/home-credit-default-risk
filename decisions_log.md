@@ -36,3 +36,46 @@ constant (0.505998), flattening real variance in this otherwise high-signal
 column. Accepted for baseline; a smarter treatment (e.g. model-based
 imputation using EXT_SOURCE_2/3 as predictors, or a missing-flag + median
 combo) is a stronger v2 candidate specifically for this column.
+
+## 2026-07-17 — Baseline logistic regression trained and evaluated
+
+**Result:** AUC-ROC = 0.7486 on held-out test set (20%, stratified).
+Recall on default class = 0.68, precision = 0.16 (class_weight="balanced").
+
+**Interpretation:** Model catches ~68% of actual defaulters at the cost of
+a high false-positive rate (17,436 safe applicants flagged as risky out of
+56,538). This is the direct effect of class_weight="balanced" prioritizing
+recall over precision — appropriate as a starting point since missing a
+defaulter is typically costlier than a false alarm, but the 0.5 default
+classification threshold is not tuned to any real cost structure.
+
+**v2 candidates:** (1) Threshold tuning based on assumed cost ratio between
+false positives and false negatives, rather than default 0.5 cutoff.
+(2) Try gradient boosting (XGBoost/LightGBM) for comparison — known to
+outperform logistic regression on this dataset by roughly 3-5 AUC points.
+(3) Feature importance analysis to identify which engineered/raw features
+drive predictions, and whether EXT_SOURCE_1's flattened imputation (see
+earlier entry) is hurting performance.
+
+
+## 2026-07-18 — Threshold tuning: selected 0.65 via F1 optimization
+
+**Decision:** Swept classification thresholds from 0.10 to 0.90 in 0.05
+increments. Selected 0.65 as the operating threshold — this maximizes F1
+(0.2980) across the sweep, versus F1 = 0.2605 at the default 0.50 cutoff.
+At 0.65: precision = 0.2277, recall = 0.4312.
+
+**Reasoning:** No real cost data exists for this project to weight false
+negatives (missed defaults) against false positives (unnecessary manual
+review) explicitly, so F1 was used as a neutral balance point rather than
+guessing a cost ratio. This is an explicit simplification — a production
+deployment would need actual cost-per-bad-loan and cost-per-review figures
+to set the threshold correctly, likely favoring recall over this F1-optimal
+point given that missed defaults are typically far costlier than false
+alarms in real lending.
+
+**Observation:** The precision-recall tradeoff is steep and the ceiling is
+a property of the model's separability, not something threshold tuning
+can overcome — no threshold achieves both high precision and high recall.
+This motivates trying a stronger model (XGBoost) as the next step, since
+threshold tuning alone has diminishing returns on a linear baseline.

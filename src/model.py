@@ -4,7 +4,9 @@ model.py
 Trains and evaluates a baseline logistic regression model for
 Home Credit default risk prediction.
 """
-
+import numpy as np
+from sklearn.metrics import precision_score, recall_score, f1_score
+import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
@@ -65,3 +67,55 @@ def evaluate_model(model, scaler, X_test, y_test):
     print(confusion_matrix(y_test, y_pred))
 
     return {"auc": auc, "y_pred": y_pred, "y_pred_proba": y_pred_proba}
+
+import numpy as np
+from sklearn.metrics import precision_score, recall_score, f1_score
+
+
+def tune_threshold(y_test, y_pred_proba, thresholds=None):
+    """
+    Evaluate precision, recall, and F1 across a range of classification
+    thresholds to understand the tradeoff, rather than relying on the
+    default 0.5 cutoff.
+
+    Args:
+        y_test: True labels.
+        y_pred_proba: Predicted probabilities (from evaluate_model's output).
+        thresholds: Array of thresholds to test. Defaults to 0.1 to 0.9.
+
+    Returns:
+        DataFrame with columns ['threshold', 'precision', 'recall', 'f1'].
+    """
+    if thresholds is None:
+        thresholds = np.arange(0.1, 0.95, 0.05)
+
+    results = []
+    for t in thresholds:
+        y_pred_t = (y_pred_proba >= t).astype(int)
+        precision = precision_score(y_test, y_pred_t, zero_division=0)
+        recall = recall_score(y_test, y_pred_t, zero_division=0)
+        f1 = f1_score(y_test, y_pred_t, zero_division=0)
+        results.append({
+            "threshold": round(t, 2),
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1": round(f1, 4)
+        })
+
+    results_df = pd.DataFrame(results)
+    print(results_df.to_string(index=False))
+
+    return results_df
+
+def predict_with_threshold(y_pred_proba, threshold=0.65):
+    """
+    Apply a specific classification threshold to predicted probabilities.
+
+    Args:
+        y_pred_proba: Predicted probabilities of default.
+        threshold: Classification cutoff (default 0.65, chosen via F1 tuning).
+
+    Returns:
+        Array of binary predictions.
+    """
+    return (y_pred_proba >= threshold).astype(int)

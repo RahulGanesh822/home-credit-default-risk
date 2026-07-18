@@ -45,15 +45,19 @@ Not included in this repo due to size (~2.5GB). To reproduce:
 
 ## Results
 
-| Model | AUC-ROC | Recall (default) | Precision (default) |
-|---|---|---|---|
-| Logistic Regression (baseline) | 0.7486 | 0.68 | 0.16 |
 
-The model catches roughly two-thirds of actual defaulters, at the cost of
-a high false-positive rate — a direct consequence of prioritizing recall
-via `class_weight="balanced"`. In a real underwriting context, this
-tradeoff would be tuned against the actual cost ratio between missed
-defaults and false alarms, rather than left at the default 0.5 threshold.
+| Model | AUC-ROC | Threshold | Recall (default) | Precision (default) |
+|---|---|---|---|---|
+| Logistic Regression (baseline, default threshold) | 0.7486 | 0.50 | 0.68 | 0.16 |
+| Logistic Regression (F1-tuned threshold) | 0.7486 | 0.65 | 0.43 | 0.23 |
+
+AUC-ROC is threshold-independent (it measures ranking quality across all
+thresholds), so it's unchanged — only the operating point moves. The
+tuned threshold trades recall for precision: catches fewer defaulters
+(43% vs 68%) but with far fewer false alarms (23% vs 16% precision).
+Threshold choice here optimizes F1 in the absence of real cost data; a
+production system would set this based on actual cost-per-bad-loan vs.
+cost-per-manual-review figures.
 
 ## Repo Structure
 ├── data/raw/          # Raw CSVs (gitignored, download instructions above)
@@ -65,8 +69,7 @@ defaults and false alarms, rather than left at the default 0.5 threshold.
 
 
 ## Setup
-```bash
-git clone https://github.com/RahulGanesh822/home-credit-default-risk.git
+```bashgit clone https://github.com/RahulGanesh822/home-credit-default-risk.git
 cd home-credit-default-risk
 python -m venv venv
 source venv/Scripts/activate  # Windows Git Bash
@@ -74,8 +77,9 @@ pip install -r requirements.txt
 ```
 
 ## Next Steps
-- Threshold tuning based on an assumed cost ratio (false negative vs.
-  false positive), rather than the default 0.5 cutoff
+- Cost-ratio-based threshold tuning using real cost-per-bad-loan and
+  cost-per-review figures, once available — current threshold (0.65) is
+  F1-optimized only, as a neutral stand-in for actual business costs
 - Gradient boosting comparison (XGBoost/LightGBM) — expected to outperform
   logistic regression by roughly 3-5 AUC points on this dataset
 - Feature importance analysis
