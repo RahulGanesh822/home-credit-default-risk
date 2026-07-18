@@ -1,5 +1,4 @@
 # Home Credit Default Risk — Credit Scorecard
-
 ## Problem
 Predicting the probability that a loan applicant will default, using
 Home Credit Group's application data (Kaggle competition dataset).
@@ -42,16 +41,22 @@ Not included in this repo due to size (~2.5GB). To reproduce:
   dataset while being completely useless. AUC-ROC measures ranking quality
   across all classification thresholds, which is the standard metric for
   credit scoring.
+- **Anomaly handling:** `DAYS_EMPLOYED` contained a placeholder value
+  (365243, ~1000 years) representing "not currently employed" rather than
+  a real day count — a known issue in this dataset. Replaced with NaN
+  (handled by standard imputation) and preserved as a binary
+  `DAYS_EMPLOYED_ANOMALY` flag. Found via feature importance review: the
+  placeholder was distorting the logistic regression coefficient (7.47,
+  more than double the next-highest feature) despite barely affecting
+  AUC — see decisions_log.md for full detail.
 
 ## Results
-
 | Model | AUC-ROC | Threshold | Recall (default) | Precision (default) |
-|---|---|---|---|---|
-| Logistic Regression (baseline, default threshold) | 0.7486 | 0.50 | 0.68 | 0.16 |
-| Logistic Regression (F1-tuned threshold) | 0.7486 | 0.65 | 0.43 | 0.23 |
-| XGBoost (untuned) | 0.7574 | 0.50 | — | — |
+| Logistic Regression (baseline, default threshold) | 0.7484 | 0.50 | 0.68 | 0.16 |
+| Logistic Regression (F1-tuned threshold) | 0.7484 | 0.65 | 0.43 | 0.23 |
+| XGBoost (untuned) | 0.7578 | 0.50 | — | — |
 
-XGBoost improved AUC-ROC by 0.0088 over logistic regression — a real but
+XGBoost improved AUC-ROC by 0.0094 over logistic regression — a real but
 modest gain, smaller than typically reported for this dataset. Likely
 explanations: hyperparameters were not tuned, and this uses only the main
 application table — most published high-performing solutions incorporate

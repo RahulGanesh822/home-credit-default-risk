@@ -105,3 +105,33 @@ linear models on this specific dataset at the single-table level.
 **v2 candidates:** Hyperparameter tuning (grid search or Optuna) on XGBoost;
 incorporating bureau.csv-derived features to test whether the gap widens
 with richer inputs.
+
+
+## 2026-07-18 — Fixed DAYS_EMPLOYED anomaly (365243 placeholder)
+
+**Issue found:** While reviewing logistic regression feature importance,
+DAYS_EMPLOYED had a coefficient of 7.47 — more than double the next highest
+feature, and inconsistent with its near-bottom ranking in XGBoost's
+importance (0.0094). Investigation showed DAYS_EMPLOYED contained a
+placeholder value of 365243 (~1000 years), used to represent "not
+currently employed" (e.g. retirees), instead of a real day count — a
+known data quality issue in this dataset.
+
+**Fix:** Added `fix_days_employed_anomaly()` to data_prep.py. Creates a
+DAYS_EMPLOYED_ANOMALY flag (1 if placeholder was present) and replaces
+the placeholder with NaN, allowing normal median imputation to handle it
+using only real values.
+
+**Result after fix:**
+- DAYS_EMPLOYED coefficient: 7.47 → 0.14 (now consistent with XGBoost)
+- Logistic Regression AUC: 0.7486 → 0.7484 (effectively unchanged)
+- XGBoost AUC: 0.7574 → 0.7578 (effectively unchanged)
+
+**Key insight:** The anomaly barely affected predictive performance (AUC
+flat in both models) because it affected a minority of rows and tree-based
+models are naturally robust to it. But it badly distorted the logistic
+regression coefficient and would have led to a materially wrong conclusion
+about which features drive default risk, had feature importance not been
+checked and cross-referenced against XGBoost. This is a concrete example
+of why accuracy/AUC alone isn't sufficient validation — interpretability
+checks caught a real bug that performance metrics did not surface.

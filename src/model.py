@@ -153,3 +153,60 @@ def train_xgboost_model(X_train, y_train):
     print(f"scale_pos_weight used: {scale_pos_weight:.2f}")
 
     return xgb_model
+
+
+def get_logistic_feature_importance(model, feature_names, top_n=20):
+    """
+    Extract and rank feature importance from a fitted logistic regression
+    model, based on coefficient magnitude.
+
+    Args:
+        model: Fitted LogisticRegression model.
+        feature_names: List of feature column names, in the same order
+                        used during training.
+        top_n: Number of top features to return.
+
+    Returns:
+        DataFrame with columns ['feature', 'coefficient', 'abs_coefficient'],
+        sorted by absolute coefficient value, descending.
+    """
+    coefficients = model.coef_[0]
+
+    importance_df = pd.DataFrame({
+        "feature": feature_names,
+        "coefficient": coefficients,
+        "abs_coefficient": np.abs(coefficients)
+    })
+
+    importance_df = importance_df.sort_values("abs_coefficient", ascending=False).head(top_n)
+
+    print(importance_df.to_string(index=False))
+
+    return importance_df
+
+
+def get_xgboost_feature_importance(model, feature_names, top_n=20):
+    """
+    Extract and rank feature importance from a fitted XGBoost model.
+
+    Args:
+        model: Fitted XGBClassifier model.
+        feature_names: List of feature column names, in the same order
+                        used during training.
+        top_n: Number of top features to return.
+
+    Returns:
+        DataFrame with columns ['feature', 'importance'], sorted descending.
+    """
+    importances = model.feature_importances_
+
+    importance_df = pd.DataFrame({
+        "feature": feature_names,
+        "importance": importances
+    })
+
+    importance_df = importance_df.sort_values("importance", ascending=False).head(top_n)
+
+    print(importance_df.to_string(index=False))
+
+    return importance_df

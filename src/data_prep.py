@@ -189,3 +189,29 @@ def split_features_target(df: pd.DataFrame, target_col: str = "TARGET"):
     print(f"Test default rate: {y_test.mean():.4f}")
 
     return X_train, X_test, y_train, y_test
+
+def fix_days_employed_anomaly(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Fix the DAYS_EMPLOYED anomaly: a placeholder value of 365243 is used
+    to represent 'not currently employed' (e.g. retirees), rather than
+    a real day count. This creates a flag column and replaces the
+    placeholder with NaN so it gets handled by normal imputation.
+
+    Args:
+        df: Input DataFrame containing DAYS_EMPLOYED.
+
+    Returns:
+        DataFrame with DAYS_EMPLOYED_ANOMALY flag added and placeholder
+        values replaced with NaN.
+    """
+    df_fixed = df.copy()
+
+    anomaly_value = 365243
+    anomaly_count = (df_fixed["DAYS_EMPLOYED"] == anomaly_value).sum()
+
+    df_fixed["DAYS_EMPLOYED_ANOMALY"] = (df_fixed["DAYS_EMPLOYED"] == anomaly_value).astype(int)
+    df_fixed.loc[df_fixed["DAYS_EMPLOYED"] == anomaly_value, "DAYS_EMPLOYED"] = np.nan
+
+    print(f"DAYS_EMPLOYED anomaly (365243) found in {anomaly_count} rows — flagged and set to NaN.")
+
+    return df_fixed
