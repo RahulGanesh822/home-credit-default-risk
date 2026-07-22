@@ -168,3 +168,20 @@ than the original hypothesis that linear relationships explained logistic
 regression's larger gain.
 **v2 candidates:** Aggregate previous_application.csv similarly; consider
 per-credit-type breakdowns (currently CREDIT_TYPE is unused) if time allows.
+
+## 2026-07-22 — Added persisted outputs: saved models, predictions, charts
+
+**Decision:** Created `src/evaluate.py` to persist actual output artifacts,
+rather than only printing results to the console during interactive runs.
+Added: saved model files (`models/logistic_regression_model.pkl`,
+`models/xgboost_model.pkl`, via joblib, including the fitted scaler for
+logistic regression), a test-set predictions CSV
+(`reports/xgboost_predictions.csv`), an ROC curve comparing both models,
+and feature importance bar charts for each model
+(`reports/figures/`).
+
+**Reasoning:** Previously, every result only existed inside a live Python
+session or manually copied into README/decisions_log — nothing was a
+reusable, inspectable artifact. This makes the project's actual outputs
+visible without requiring someone to run the code themselves, and makes
+the trained models reusable for scoring new applicants without retraining.

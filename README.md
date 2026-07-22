@@ -75,6 +75,19 @@ application table — most published high-performing solutions incorporate
 bureau.csv and previous_application.csv for richer credit history
 features, which is deferred to a future iteration.
 
+## Outputs
+
+- `models/logistic_regression_model.pkl`, `models/xgboost_model.pkl` —
+  saved trained models (joblib), ready to load and score new applicants
+  without retraining
+- `reports/xgboost_predictions.csv` — test set predictions (applicant ID,
+  actual outcome, predicted probability)
+- `reports/figures/roc_curve.png` — ROC curve comparing both models
+- `reports/figures/logistic_regression_importance.png`,
+  `reports/figures/xgboost_importance.png` — top feature importance by model
+
+![ROC Curve](reports/figures/roc_curve.png)
+
 ## Repo Structure
 ├── data/raw/          # Raw CSVs (gitignored, download instructions above)
 ├── src/
