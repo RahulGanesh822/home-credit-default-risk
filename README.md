@@ -49,12 +49,24 @@ Not included in this repo due to size (~2.5GB). To reproduce:
   placeholder was distorting the logistic regression coefficient (7.47,
   more than double the next-highest feature) despite barely affecting
   AUC — see decisions_log.md for full detail.
+- **External data integration:** Aggregated `bureau.csv` (1.7M rows, one
+  row per previous credit from other lenders) to one row per client — 9
+  features covering credit counts, overdue history, exposure, and debt.
+  Merged via left join to preserve all applicants. Clients with no bureau
+  history (14.31% of applicants — a genuine thin-file segment) had
+  count/sum features explicitly zero-filled and a `HAS_BUREAU_HISTORY`
+  flag added, rather than being silently dropped or falsely imputed.
+  Improved AUC-ROC by +0.0038 (logistic regression) and +0.0024 (XGBoost).
 
 ## Results
 | Model | AUC-ROC | Threshold | Recall (default) | Precision (default) |
-| Logistic Regression (baseline, default threshold) | 0.7484 | 0.50 | 0.68 | 0.16 |
+|---|---|---|---|---|
+| Logistic Regression (application data only) | 0.7484 | 0.50 | 0.68 | 0.16 |
 | Logistic Regression (F1-tuned threshold) | 0.7484 | 0.65 | 0.43 | 0.23 |
-| XGBoost (untuned) | 0.7578 | 0.50 | — | — |
+| XGBoost (application data only) | 0.7578 | 0.50 | — | — |
+| Logistic Regression (+ bureau features) | 0.7522 | 0.50 | — | — |
+| XGBoost (+ bureau features) | 0.7602 | 0.50 | — | — |
+
 
 XGBoost improved AUC-ROC by 0.0094 over logistic regression — a real but
 modest gain, smaller than typically reported for this dataset. Likely
@@ -85,3 +97,5 @@ pip install -r requirements.txt
   cost-per-review figures, once available — current threshold (0.65) is
   F1-optimized only, as a neutral stand-in for actual business costs- Feature importance analysis
 - SQL layer for the related Early Warning System (EWS) prototype
+- Aggregate previous_application.csv similarly, following the same
+  pattern used for bureau.csv

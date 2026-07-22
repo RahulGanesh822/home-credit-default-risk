@@ -135,3 +135,36 @@ about which features drive default risk, had feature importance not been
 checked and cross-referenced against XGBoost. This is a concrete example
 of why accuracy/AUC alone isn't sufficient validation — interpretability
 checks caught a real bug that performance metrics did not surface.
+
+
+## 2026-07-22 — Integrated bureau.csv aggregated features
+
+**Decision:** Aggregated bureau.csv (1,716,428 rows, one row per previous
+credit) to one row per client (SK_ID_CURR) — 9 summary features covering
+credit count, active/overdue counts, total exposure/debt/overdue amounts,
+prolongation count, and average credit recency. Merged onto the main
+application table via left join to preserve all applicants, including
+those with no bureau history.
+
+**Handling clients with no bureau history (44,020 clients, 14.31%):**
+Count/sum columns filled with 0 (factually correct — no history means
+zero previous credits). BUREAU_DAYS_CREDIT_MEAN left as NaN and handled
+by standard median imputation, since 0 would falsely imply "average
+credit opened today." Added a HAS_BUREAU_HISTORY flag (computed before
+the zero-fill, to correctly capture true missingness) so the model can
+use the absence of history as its own signal.
+
+**Result:**
+- Logistic Regression AUC: 0.7484 → 0.7522 (+0.0038)
+- XGBoost AUC: 0.7578 → 0.7602 (+0.0024)
+
+**Observation (confirmed via feature importance):** BUREAU_ACTIVE_COUNT
+entered logistic regression's top 15 (coefficient 0.188, positive — more
+active previous credits associates with higher default risk).
+BUREAU_AMT_CREDIT_SUM_TOTAL entered XGBoost's top 20 instead (importance
+0.0104). Each model found a different bureau feature useful, rather than
+bureau features broadly favoring one model type — a more precise finding
+than the original hypothesis that linear relationships explained logistic
+regression's larger gain.
+**v2 candidates:** Aggregate previous_application.csv similarly; consider
+per-credit-type breakdowns (currently CREDIT_TYPE is unused) if time allows.

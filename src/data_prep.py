@@ -215,3 +215,80 @@ def fix_days_employed_anomaly(df: pd.DataFrame) -> pd.DataFrame:
     print(f"DAYS_EMPLOYED anomaly (365243) found in {anomaly_count} rows — flagged and set to NaN.")
 
     return df_fixed
+
+
+def load_and_aggregate_bureau(data_dir: str = "data/raw") -> pd.DataFrame:
+    """
+    Load bureau.csv and aggregate from one-row-per-credit to
+    one-row-per-client (SK_ID_CURR), producing summary features
+    about each client's previous credit history from other lenders.
+
+    Args:
+        data_dir: Path to the folder containing raw CSVs.
+
+    Returns:
+        DataFrame with one row per SK_ID_CURR and aggregated bureau features.
+    """
+    path = Path(data_dir) / "bureau.csv"
+    bureau = pd.read_csv(path)
+
+    bureau["IS_OVERDUE"] = (bureau["CREDIT_DAY_OVERDUE"] > 0).astype(int)
+    bureau["IS_ACTIVE"] = (bureau["CREDIT_ACTIVE"] == "Active").astype(int)
+
+    agg = bureau.groupby("SK_ID_CURR").agg(
+        BUREAU_CREDIT_COUNT=("SK_ID_BUREAU", "count"),
+        BUREAU_ACTIVE_COUNT=("IS_ACTIVE", "sum"),
+        BUREAU_OVERDUE_COUNT=("IS_OVERDUE", "sum"),
+        BUREAU_DAYS_OVERDUE_MAX=("CREDIT_DAY_OVERDUE", "max"),
+        BUREAU_AMT_CREDIT_SUM_TOTAL=("AMT_CREDIT_SUM", "sum"),
+        BUREAU_AMT_CREDIT_SUM_DEBT_TOTAL=("AMT_CREDIT_SUM_DEBT", "sum"),
+        BUREAU_AMT_OVERDUE_TOTAL=("AMT_CREDIT_SUM_OVERDUE", "sum"),
+        BUREAU_CNT_PROLONGED_TOTAL=("CNT_CREDIT_PROLONG", "sum"),
+        BUREAU_DAYS_CREDIT_MEAN=("DAYS_CREDIT", "mean"),
+    ).reset_index()
+
+    print(f"Aggregated bureau data: {agg.shape[0]} clients, {agg.shape[1]} features")
+
+    return agg
+
+def merge_bureau_features(df: pd.DataFrame, bureau_agg: pd.DataFrame) -> pd.DataFrame:
+    """
+    Merge aggregated bureau features onto the main application DataFrame.
+    Handles clients with no bureau history explicitly: count/sum columns
+    are filled with 0 (factually correct — no history means zero previous
+    credits), while BUREAU_DAYS_CREDIT_MEAN is left as NaN for standard
+    median imputation later, since 0 would be a false value for "average
+    recency." A HAS_BUREAU_HISTORY flag captures the missingness itself.
+
+    Args:
+        df: Main application DataFrame (must contain SK_ID_CURR).
+        bureau_agg: Aggregated bureau features, as returned by
+                    load_and_aggregate_bureau().
+
+    Returns:
+        DataFrame with bureau features merged in.
+    """
+    df_merged = df.merge(bureau_agg, on="SK_ID_CURR", how="left").copy()
+
+    df_merged["HAS_BUREAU_HISTORY"] = df_merged["BUREAU_CREDIT_COUNT"].notnull().astype(int)
+
+    
+
+    zero_fill_cols = [
+        "BUREAU_CREDIT_COUNT",
+        "BUREAU_ACTIVE_COUNT",
+        "BUREAU_OVERDUE_COUNT",
+        "BUREAU_DAYS_OVERDUE_MAX",
+        "BUREAU_AMT_CREDIT_SUM_TOTAL",
+        "BUREAU_AMT_CREDIT_SUM_DEBT_TOTAL",
+        "BUREAU_AMT_OVERDUE_TOTAL",
+        "BUREAU_CNT_PROLONGED_TOTAL",
+    ]
+    for col in zero_fill_cols:
+        df_merged[col] = df_merged[col].fillna(0)
+
+    no_history_count = (df_merged["HAS_BUREAU_HISTORY"] == 0).sum()
+    print(f"Clients with no bureau history: {no_history_count} ({no_history_count / len(df_merged) * 100:.2f}%)")
+    print(f"Shape after merge: {df_merged.shape}")
+
+    return df_merged
